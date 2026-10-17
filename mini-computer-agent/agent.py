@@ -22,7 +22,7 @@ def main(task: str, max_steps: int = 8):
     history, step = [], 0
     while step < max_steps:
         screen = eyes.screen_state()                     # 1. OBSERVE
-        action = brain.next_step(task, screen, history)  # 2. THINK
+        action = brain.next_step("auto", task, screen, history)  # 2. THINK
         print(f"[{step}] -> {action}")
         if action.get("tool") == "done":
             print("TASK COMPLETE"); break
