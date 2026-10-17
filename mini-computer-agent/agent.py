@@ -18,6 +18,7 @@ import brain
 import config
 import eyes
 import hands
+import skills
 
 
 def run_tool(action: dict) -> str:
@@ -44,16 +45,30 @@ def main() -> int:
                     help="print actions without executing them")
     ap.add_argument("--max-steps", type=int, default=8,
                     help="safety cap on the loop (default 8)")
+    ap.add_argument("--list-skills", action="store_true",
+                    help="list available skills and exit")
     args = ap.parse_args()
+
+    if args.list_skills:
+        found = skills.load_skills()
+        if not found:
+            print("no skills found in", skills.SKILLS_DIR)
+        for s in found:
+            print(f"{s.name}: {s.description}")
+        return 0
 
     config.DRY_RUN = args.dry_run
     task = " ".join(args.task) or "open a terminal and type hello"
+    guidance = skills.skills_prompt(task)
+    if guidance:
+        print(f"[skill] {guidance.splitlines()[0]}")
 
     history = []
     for step in range(args.max_steps):
         screen = eyes.screen_state()                      # 1. OBSERVE
         try:
-            action = brain.next_step(args.brain, task, screen, history)
+            action = brain.next_step(args.brain, task, screen, history,
+                                     guidance)            # 2. THINK
         except ValueError as e:
             print(f"[error] brain output rejected: {e}")
             return 1
@@ -63,13 +78,13 @@ def main() -> int:
             print("TASK COMPLETE")
             return 0
 
-        refusal = config.check_action(action)             # 2. SAFETY GATE
+        refusal = config.check_action(action)             # 3. SAFETY GATE
         if refusal:
             result = f"REFUSED: {refusal}"
         elif config.DRY_RUN:
             result = f"(dry-run) would run: {action}"
         else:
-            result = run_tool(action)                     # 3. ACT
+            result = run_tool(action)                     # 4. ACT
         print(f"    result: {result}")
 
         history.append({"action": str(action), "result": result})
