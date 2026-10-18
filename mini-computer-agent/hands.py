@@ -64,6 +64,92 @@ def screenshot(path="/tmp/shot.png") -> str:
     run(f"import -window root {path}")   # ImageMagick
     return f"Screenshot saved: {path}"
 
+def focus_window(keyword: str) -> str:
+    """Focus the first window whose title contains keyword."""
+    win = eyes.find_window(keyword)
+    if not win:
+        return f"No window found matching '{keyword}'"
+    run(f"xdotool windowactivate {win['id']}")
+    return f"Focused window: {win['name']}"
+
+def move_window(keyword: str, x: int, y: int) -> str:
+    """Move the first window matching keyword to position (x, y)."""
+    win = eyes.find_window(keyword)
+    if not win:
+        return f"No window found matching '{keyword}'"
+    run(f"xdotool windowmove {win['id']} {x} {y}")
+    return f"Moved window '{win['name']}' to ({x}, {y})"
+
+def resize_window(keyword: str, w: int, h: int) -> str:
+    """Resize the first window matching keyword to w x h pixels."""
+    win = eyes.find_window(keyword)
+    if not win:
+        return f"No window found matching '{keyword}'"
+    run(f"xdotool windowsize {win['id']} {w} {h}")
+    return f"Resized window '{win['name']}' to {w}x{h}"
+
+def close_window(keyword: str) -> str:
+    """Close the first window matching keyword."""
+    win = eyes.find_window(keyword)
+    if not win:
+        return f"No window found matching '{keyword}'"
+    run(f"xdotool windowclose {win['id']}")
+    return f"Closed window: {win['name']}"
+
+def drag(x1: int, y1: int, x2: int, y2: int) -> str:
+    """Click and drag from (x1, y1) to (x2, y2)."""
+    run(f"xdotool mousedown 1")
+    run(f"xdotool mousemove {x2} {y2}")
+    run(f"xdotool mouseup 1")
+    return f"Dragged from ({x1}, {y1}) to ({x2}, {y2})"
+
+def scroll(direction: str, clicks: int = 1) -> str:
+    """Scroll mouse wheel: direction='up' or 'down', clicks=number of scroll steps."""
+    button = "4" if direction.lower() == "up" else "5"
+    run(f"xdotool click --repeat {clicks} --delay 100 {button}")
+    return f"Scrolled {direction} {clicks} times"
+
+def run_command(cmd: str) -> str:
+    """Execute a shell command and return its output."""
+    result = run(cmd, timeout=30)
+    return f"Command output: {result}"
+
+def list_apps() -> str:
+    """List all running applications with their window counts."""
+    apps = eyes.list_apps()
+    if not apps:
+        return "No applications found"
+    lines = [f"- {a['name']} ({a['windows']} window{'s' if a['windows'] > 1 else ''})" for a in apps]
+    return "Running applications:\n" + "\n".join(lines)
+
+def focus_app(name: str) -> str:
+    """Focus an application by name (activates its first window)."""
+    win = eyes.find_window(name)
+    if not win:
+        return f"No window found matching '{name}'"
+    run(f"xdotool windowactivate {win['id']}")
+    return f"Focused application: {win['name']}"
+
+def get_screen_geometry() -> str:
+    """Get screen resolution and geometry information."""
+    geo = eyes.get_screen_geometry()
+    return f"Screen: {geo['width']}x{geo['height']}"
+
+def hover(x: int, y: int) -> str:
+    """Move mouse to position without clicking."""
+    run(f"xdotool mousemove {x} {y}")
+    return f"Hovered at ({x}, {y})"
+
+def right_click(x: int, y: int) -> str:
+    """Right-click at pixel coordinates."""
+    run(f"xdotool mousemove {x} {y} click 3")
+    return f"Right-clicked at ({x}, {y})"
+
+def double_click(x: int, y: int) -> str:
+    """Double-click at pixel coordinates."""
+    run(f"xdotool mousemove {x} {y} click --repeat 2 --delay 100 1")
+    return f"Double-clicked at ({x}, {y})"
+
 def sh(s: str) -> str:
     return "'" + s.replace("'", "'\\''") + "'"
 
@@ -77,4 +163,17 @@ TOOLS = """
 - type_text(text): type a string into the focused window
 - press(key): press a key or combo, e.g. "Return", "ctrl+s", "alt+F4"
 - screenshot(path): save a PNG of the screen
+- focus_window(keyword): focus the first window whose title contains keyword
+- move_window(keyword, x, y): move the first window matching keyword to position (x, y)
+- resize_window(keyword, w, h): resize the first window matching keyword to w x h pixels
+- close_window(keyword): close the first window matching keyword
+- drag(x1, y1, x2, y2): click and drag from (x1, y1) to (x2, y2)
+- scroll(direction, clicks): scroll mouse wheel, direction='up' or 'down', clicks=number of steps
+- run_command(cmd): execute a shell command and return its output
+- list_apps(): list all running applications with their window counts
+- focus_app(name): focus an application by name (activates its first window)
+- get_screen_geometry(): get screen resolution and geometry information
+- hover(x, y): move mouse to position without clicking
+- right_click(x, y): right-click at pixel coordinates
+- double_click(x, y): double-click at pixel coordinates
 """

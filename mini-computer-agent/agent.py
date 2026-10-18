@@ -19,10 +19,21 @@ import config
 import eyes
 import hands
 import skills
+import errors
+import optimizer
 
 
 def run_tool(action: dict) -> str:
     t, a = action.get("tool"), action.get("args") or {}
+
+    # Optimize action with smart defaults
+    action = optimizer.optimizer.optimize_action(action)
+    t, a = action.get("tool"), action.get("args")
+
+    # Use cached screen state when possible
+    if t == "see_windows":
+        return optimizer.get_cached_screen_state(eyes.screen_state)
+
     f = {"open_app": lambda: hands.open_app(a["name"]),
          "see_windows": lambda: eyes.screen_state(),
          "find_window": lambda: str(eyes.find_window(a["keyword"])),
@@ -30,7 +41,13 @@ def run_tool(action: dict) -> str:
          "type_text": lambda: hands.type_text(a["text"]),
          "press": lambda: hands.press(a["key"]),
          "screenshot": lambda: hands.screenshot(a.get("path"))}.get(t)
-    return f() if f else f"Unknown tool: {t}"
+    result = f() if f else f"Unknown tool: {t}"
+
+    # Invalidate cache if action changes screen state
+    if optimizer.should_invalidate_cache(action):
+        optimizer.optimizer.invalidate_cache()
+
+    return result
 
 
 def main() -> int:
