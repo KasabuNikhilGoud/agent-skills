@@ -48,7 +48,7 @@ def screen_state() -> str:
         flag = " [ACTIVE]" if w["active"] else ""
         lines.append(
             f'- "{w["name"]}" at ({w["x"]},{w["y"]}) '
-            f"size {w["w"]}x{w["h"]}{flag}")
+            f'size {w["w"]}x{w["h"]}{flag}')
     return "\n".join(lines)
 
 
