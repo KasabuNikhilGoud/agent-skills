@@ -35,6 +35,9 @@ bash scripts/install.sh
 
 # Run the browser agent
 python3 scripts/browser_agent.py --url https://example.com --task "search for something"
+
+# Run tests
+python3 scripts/test_interact.py
 ```
 
 ## Skills Overview
@@ -48,6 +51,8 @@ python3 scripts/browser_agent.py --url https://example.com --task "search for so
 | **auth** | Login flows, session management | `login`, `state-save`, `state-load` |
 | **signup** | Account creation, verify, onboard | `signup`, `verify-email`, `onboard` |
 | **monitor** | Page watching, change detection | `watch`, `poll`, `diff` |
+| **interact** | Human-like interactions (scroll, keyboard, mouse) | `scroll`, `press`, `hover`, `drag`, `type_human` |
+| **shell** | Linux shell command execution with safety | `run_cmd` |
 
 ## Integration
 
