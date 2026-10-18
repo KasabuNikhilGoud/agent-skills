@@ -19,18 +19,53 @@ import config
 import eyes
 import hands
 import skills
+import errors
 
 
 def run_tool(action: dict) -> str:
     t, a = action.get("tool"), action.get("args") or {}
-    f = {"open_app": lambda: hands.open_app(a["name"]),
-         "see_windows": lambda: eyes.screen_state(),
-         "find_window": lambda: str(eyes.find_window(a["keyword"])),
-         "click": lambda: hands.click(a["x"], a["y"]),
-         "type_text": lambda: hands.type_text(a["text"]),
-         "press": lambda: hands.press(a["key"]),
-         "screenshot": lambda: hands.screenshot(a.get("path"))}.get(t)
-    return f() if f else f"Unknown tool: {t}"
+
+    # Validate coordinates for pointer actions
+    if t in ["click", "hover", "right_click", "double_click"]:
+        x, y = a.get("x", 0), a.get("y", 0)
+        if not errors.validate_coordinates(x, y):
+            return f"ERROR: Invalid coordinates ({x}, {y}) - outside screen bounds"
+
+    # Execute with retry logic for flaky operations
+    def execute():
+        f = {"open_app": lambda: hands.open_app(a["name"]),
+             "see_windows": lambda: eyes.screen_state(),
+             "find_window": lambda: str(eyes.find_window(a["keyword"])),
+             "click": lambda: hands.click(a["x"], a["y"]),
+             "type_text": lambda: hands.type_text(a["text"]),
+             "press": lambda: hands.press(a["key"]),
+             "screenshot": lambda: hands.screenshot(a.get("path")),
+             "focus_window": lambda: hands.focus_window(a["keyword"]),
+             "move_window": lambda: hands.move_window(a["keyword"], a["x"], a["y"]),
+             "resize_window": lambda: hands.resize_window(a["keyword"], a["w"], a["h"]),
+             "close_window": lambda: hands.close_window(a["keyword"]),
+             "drag": lambda: hands.drag(a["x1"], a["y1"], a["x2"], a["y2"]),
+             "scroll": lambda: hands.scroll(a.get("direction", "down"), a.get("clicks", 1)),
+             "run_command": lambda: hands.run_command(a["cmd"]),
+             "list_apps": lambda: hands.list_apps(),
+             "focus_app": lambda: hands.focus_app(a["name"]),
+             "get_screen_geometry": lambda: hands.get_screen_geometry(),
+             "hover": lambda: hands.hover(a["x"], a["y"]),
+             "right_click": lambda: hands.right_click(a["x"], a["y"]),
+             "double_click": lambda: hands.double_click(a["x"], a["y"])}.get(t)
+        if not f:
+            return f"Unknown tool: {t}"
+        return f()
+
+    # Retry with backoff for operations that commonly fail transiently
+    retry_tools = {"open_app", "click", "type_text", "press", "focus_window"}
+    if t in retry_tools and not config.DRY_RUN:
+        try:
+            return errors.retry_with_backoff(execute, max_retries=2, tool=t)
+        except errors.AgentError as e:
+            return errors.format_error_for_brain(e)
+
+    return execute()
 
 
 def main() -> int:
