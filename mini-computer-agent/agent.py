@@ -29,7 +29,14 @@ def run_tool(action: dict) -> str:
          "click": lambda: hands.click(a["x"], a["y"]),
          "type_text": lambda: hands.type_text(a["text"]),
          "press": lambda: hands.press(a["key"]),
-         "screenshot": lambda: hands.screenshot(a.get("path"))}.get(t)
+         "screenshot": lambda: hands.screenshot(a.get("path")),
+         "focus_window": lambda: hands.focus_window(a["keyword"]),
+         "move_window": lambda: hands.move_window(a["keyword"], a["x"], a["y"]),
+         "resize_window": lambda: hands.resize_window(a["keyword"], a["w"], a["h"]),
+         "close_window": lambda: hands.close_window(a["keyword"]),
+         "drag": lambda: hands.drag(a["x1"], a["y1"], a["x2"], a["y2"]),
+         "scroll": lambda: hands.scroll(a.get("direction", "down"), a.get("clicks", 1)),
+         "run_command": lambda: hands.run_command(a["cmd"])}.get(t)
     return f() if f else f"Unknown tool: {t}"
 
 

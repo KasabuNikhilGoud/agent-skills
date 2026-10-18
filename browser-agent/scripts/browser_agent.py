@@ -222,6 +222,148 @@ class BrowserAgent:
     def evaluate(self, js: str):
         return self._page.evaluate(js)
 
+    # ── Human-like Interaction Methods ──
+
+    def scroll(self, direction: str = "down", amount: int = 400) -> str:
+        """Mouse-wheel scroll in given direction."""
+        dx, dy = 0, 0
+        if direction == "down":
+            dy = amount
+        elif direction == "up":
+            dy = -amount
+        elif direction == "right":
+            dx = amount
+        elif direction == "left":
+            dx = -amount
+        self._page.mouse.wheel(dx, dy)
+        return f"Scrolled {direction} by {amount}px"
+
+    def scroll_to(self, selector: str) -> str:
+        """Scroll element into view if needed."""
+        el = self._page.query_selector(selector)
+        if el:
+            el.scroll_into_view_if_needed()
+            return f"Scrolled to {selector}"
+        return f"Element {selector} not found"
+
+    def press(self, key: str) -> str:
+        """Press keyboard key or combo (e.g., 'Enter', 'Control+a', 'Escape')."""
+        self._page.keyboard.press(key)
+        return f"Pressed {key}"
+
+    def hover(self, selector: str) -> str:
+        """Mouse over element (for menus, tooltips)."""
+        el = self._page.query_selector(selector)
+        if el:
+            el.hover()
+            return f"Hovered over {selector}"
+        return f"Element {selector} not found"
+
+    def drag(self, source_selector: str, target_selector: str) -> str:
+        """HTML5-style drag from source to target."""
+        src = self._page.query_selector(source_selector)
+        dst = self._page.query_selector(target_selector)
+        if src and dst:
+            src.hover()
+            self._page.mouse.down()
+            dst.hover()
+            self._page.mouse.up()
+            return f"Dragged {source_selector} to {target_selector}"
+        return f"Source or target element not found"
+
+    def double_click(self, selector: str) -> str:
+        """Double-click on element."""
+        el = self._page.query_selector(selector)
+        if el:
+            el.dblclick()
+            return f"Double-clicked {selector}"
+        return f"Element {selector} not found"
+
+    def right_click(self, selector: str) -> str:
+        """Right-click (context menu) on element."""
+        el = self._page.query_selector(selector)
+        if el:
+            el.click(button="right")
+            return f"Right-clicked {selector}"
+        return f"Element {selector} not found"
+
+    def type_human(self, selector: str, text: str, delay_ms: int = 50) -> str:
+        """Click element and type character by character with delay."""
+        el = self._page.query_selector(selector)
+        if el:
+            el.click()
+            self._page.keyboard.type(text, delay=delay_ms)
+            return f"Typed '{text}' into {selector} with {delay_ms}ms delay"
+        return f"Element {selector} not found"
+
+    def clear(self, selector: str) -> str:
+        """Clear input field (select-all + delete)."""
+        el = self._page.query_selector(selector)
+        if el:
+            el.fill("")
+            return f"Cleared {selector}"
+        return f"Element {selector} not found"
+
+    def wait_for(self, selector: str, timeout_s: int = 10) -> bool:
+        """Wait for selector to appear; return True if found, False on timeout."""
+        try:
+            self._page.wait_for_selector(selector, timeout=timeout_s * 1000)
+            return True
+        except PwTimeout:
+            return False
+
+    # ── Shell Command Execution ──
+
+    def run_cmd(self, command: str, timeout_s: int = 30) -> dict:
+        """Run shell command with safety checks. Returns dict with cmd, stdout, stderr, returncode."""
+        # Safety deny-list (dangerous commands)
+        deny_patterns = [
+            "rm -rf /",           # Recursive delete from root
+            "mkfs",               # Filesystem formatting
+            "dd of=/dev/",        # Direct disk writes
+            ":(){",               # Fork bomb pattern
+            "shutdown",           # System shutdown
+            "reboot",             # System reboot
+            "halt",               # System halt
+        ]
+        cmd_lower = command.lower()
+        for pattern in deny_patterns:
+            if pattern in cmd_lower:
+                return {
+                    "cmd": command,
+                    "stdout": "",
+                    "stderr": f"Command denied by safety policy: contains '{pattern}'",
+                    "returncode": -1
+                }
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout_s
+            )
+            return {
+                "cmd": command,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "cmd": command,
+                "stdout": "",
+                "stderr": f"Command timed out after {timeout_s}s",
+                "returncode": -1
+            }
+        except Exception as e:
+            return {
+                "cmd": command,
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1
+            }
+
     # ── Search Skill ──
 
     def search(self, query: str, engine: str = "duckduckgo", count: int = 10):
@@ -425,7 +567,23 @@ Title: {state.title}
 Page elements: {elements_json}
 
 Create a step-by-step plan as a JSON array of actions to complete the task.
-Each action: {{"action":"fill/click/select/goto","selector":"css-selector","value":"text"}}
+Available actions:
+- fill: {{"action":"fill","selector":"css-selector","value":"text"}}
+- click: {{"action":"click","selector":"css-selector"}}
+- select: {{"action":"select","selector":"css-selector","value":"option"}}
+- goto: {{"action":"goto","value":"url"}}
+- scroll: {{"action":"scroll","value":"down/up/left/right","amount":400}}
+- scroll_to: {{"action":"scroll_to","selector":"css-selector"}}
+- press: {{"action":"press","value":"key"}} (e.g., "Enter", "Escape", "Control+a")
+- hover: {{"action":"hover","selector":"css-selector"}}
+- drag: {{"action":"drag","selector":"source","target":"target"}}
+- double_click: {{"action":"double_click","selector":"css-selector"}}
+- right_click: {{"action":"right_click","selector":"css-selector"}}
+- type: {{"action":"type","selector":"css-selector","value":"text","delay_ms":50}}
+- clear: {{"action":"clear","selector":"css-selector"}}
+- wait: {{"action":"wait","selector":"css-selector","timeout_s":10}}
+- cmd: {{"action":"cmd","value":"shell command","timeout_s":30}}
+
 Use realistic dummy data for forms. Return ONLY the JSON array, no other text."""
         response = ask_llm(prompt)
         response = re.sub(r'```(?:json)?\n?', '', response).strip()
@@ -440,6 +598,8 @@ Use realistic dummy data for forms. Return ONLY the JSON array, no other text.""
         at = action.get("action", "")
         sel = action.get("selector", "")
         val = action.get("value", "")
+        amt = action.get("amount", 400)
+        tgt = action.get("target", "")
         if at == "fill":
             return self.fill(sel, val)
         elif at == "click":
@@ -448,6 +608,41 @@ Use realistic dummy data for forms. Return ONLY the JSON array, no other text.""
             return self.select(sel, val)
         elif at == "goto":
             self.goto(val or sel)
+            return True
+        elif at == "scroll":
+            self.scroll(direction=val, amount=amt)
+            return True
+        elif at == "scroll_to":
+            self.scroll_to(sel)
+            return True
+        elif at == "press":
+            self.press(val)
+            return True
+        elif at == "hover":
+            self.hover(sel)
+            return True
+        elif at == "drag":
+            self.drag(sel, tgt)
+            return True
+        elif at == "double_click":
+            self.double_click(sel)
+            return True
+        elif at == "right_click":
+            self.right_click(sel)
+            return True
+        elif at == "type":
+            delay = action.get("delay_ms", 50)
+            self.type_human(sel, val, delay_ms=delay)
+            return True
+        elif at == "clear":
+            self.clear(sel)
+            return True
+        elif at == "wait":
+            timeout = action.get("timeout_s", 10)
+            return self.wait_for(sel, timeout_s=timeout)
+        elif at == "cmd":
+            timeout = action.get("timeout_s", 30)
+            self.run_cmd(val, timeout_s=timeout)
             return True
         return True
 

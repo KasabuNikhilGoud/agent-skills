@@ -16,10 +16,36 @@ def _run(cmd: str) -> str:
 
 
 def window_list() -> list:
-    """Every visible window: id, name, position, size and focused flag."""
-    ids = _run("xdotool search --onlyvisible --name ''").split()
+    """Every visible window: id, name, position, size and focused flag.
+    Uses wmctrl for geometry if available (more accurate), falls back to xdotool."""
     active = _run("xdotool getactivewindow")
     windows = []
+
+    # Try wmctrl first for better geometry data
+    try:
+        wmctrl_output = _run("wmctrl -l -G")
+        if wmctrl_output:
+            for line in wmctrl_output.splitlines():
+                parts = line.split(None, 8)
+                if len(parts) < 9:
+                    continue
+                wid_hex, desktop, x, y, w, h, wm_class, hostname, name = parts
+                wid = int(wid_hex, 16)
+                windows.append({
+                    "id": wid,
+                    "name": name,
+                    "x": int(x),
+                    "y": int(y),
+                    "w": int(w),
+                    "h": int(h),
+                    "active": str(wid) == active,
+                })
+            return windows
+    except Exception:
+        pass
+
+    # Fallback to xdotool
+    ids = _run("xdotool search --onlyvisible --name ''").split()
     for wid in ids:
         name = _run(f"xdotool getwindowname {wid}")
         if not name:

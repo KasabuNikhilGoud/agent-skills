@@ -19,7 +19,7 @@ says `done` or the step limit is hit.
 
 | File | Role |
 |------|------|
-| `hands.py` | EYES + HANDS: `see_windows()`, `open_app()`, `click()`, `type_text()`, `press()`, `screenshot()` |
+| `hands.py` | EYES + HANDS: `see_windows()`, `open_app()`, `click()`, `type_text()`, `press()`, `screenshot()`, `focus_window()`, `move_window()`, `resize_window()`, `close_window()`, `drag()`, `scroll()`, `run_command()` |
 | `brain.py` | THINK: `llm_next_step()` (real LLM) or `scripted_next_step()` (offline demo) |
 | `agent.py` | the loop that wires eyes + brain + hands together |
 
@@ -48,11 +48,13 @@ into an agent.
 
 ## Upgrade path (in order of payoff)
 
-1. **Better eyes** -- window titles + geometry (`wmctrl -l -G`), then the
-   accessibility tree (`pyatspi`): every button and label as text.
+1. ~~**Better eyes** -- window titles + geometry (`wmctrl -l -G`), then the
+   accessibility tree (`pyatspi`): every button and label as text.~~ ✅ **DONE**
 2. **Vision fallback** -- send `screenshot()` output to a vision model only
    when text isn't enough. Slower and pricier; not the default.
-3. **Safety** -- allowlist of apps/commands, `--dry-run` flag, confirmation
-   before destructive actions.
+3. ~~**Safety** -- allowlist of apps/commands, `--dry-run` flag, confirmation
+   before destructive actions.~~ ✅ **DONE**
 4. **Skills** -- a `skills/` folder of `SKILL.md` files keyword-matched to the
    task and injected into the system prompt.
+5. ~~**More tools** -- window management (focus, move, resize, close), drag,
+   scroll, and shell command execution.~~ ✅ **DONE**
