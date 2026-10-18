@@ -2,7 +2,7 @@
 """mini-computer-agent: observe -> think -> act -> repeat.
 
 A small computer-use agent that opens apps, clicks and types on a Linux
-desktop. See DESIGN.md for the architecture and EXAMPLES.md for transcripts.
+desktop. See README.md for the architecture.
 
 Usage:
     python3 agent.py "open a terminal and type hello"
@@ -30,7 +30,14 @@ def run_tool(action: dict) -> str:
          "type_text": lambda: hands.type_text(a["text"]),
          "press": lambda: hands.press(a["key"]),
          "screenshot": lambda: hands.screenshot(a.get("path"))}.get(t)
-    return f() if f else f"Unknown tool: {t}"
+    if not f:
+        return f"Unknown tool: {t}"
+    try:
+        return f()
+    except KeyError as e:
+        # a missing argument is feedback the brain can act on next turn,
+        # not a reason to crash the whole run
+        return f"Error: tool '{t}' is missing required argument {e}"
 
 
 def main() -> int:
@@ -71,6 +78,9 @@ def main() -> int:
                                      guidance)            # 2. THINK
         except ValueError as e:
             print(f"[error] brain output rejected: {e}")
+            return 1
+        except Exception as e:  # network/API failure: exit with a message
+            print(f"[error] brain failed: {type(e).__name__}: {e}")
             return 1
         print(f"[{step}] brain -> {action}")
 

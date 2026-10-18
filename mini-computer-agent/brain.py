@@ -66,7 +66,12 @@ def opencode_next_step(task, screen, history, guidance="") -> dict:
     if os.environ.get("OPENCODE_MODEL"):
         cmd += ["-m", os.environ["OPENCODE_MODEL"]]
     cmd.append(SYSTEM + "\n\n" + _prompt(task, screen, history, guidance))
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except FileNotFoundError:
+        raise ValueError("the 'opencode' CLI was not found on PATH")
+    except subprocess.TimeoutExpired:
+        raise ValueError("the 'opencode' CLI timed out after 120s")
     return parse_action(proc.stdout + proc.stderr)
 
 

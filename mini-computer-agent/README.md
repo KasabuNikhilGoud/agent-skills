@@ -19,8 +19,11 @@ says `done` or the step limit is hit.
 
 | File | Role |
 |------|------|
-| `hands.py` | EYES + HANDS: `see_windows()`, `open_app()`, `click()`, `type_text()`, `press()`, `screenshot()` |
+| `eyes.py` | EYES: `window_list()`, `screen_state()`, `find_window()` |
+| `hands.py` | HANDS: `open_app()`, `click()`, `type_text()`, `press()`, `screenshot()` |
 | `brain.py` | THINK: `llm_next_step()` (real LLM) or `scripted_next_step()` (offline demo) |
+| `skills.py` | SKILLS: `SKILL.md` files keyword-matched to the task, injected as guidance |
+| `config.py` | SAFETY: app allowlist + `--dry-run`, checked before any action runs |
 | `agent.py` | the loop that wires eyes + brain + hands together |
 
 ## Run the offline demo (no API key needed)
