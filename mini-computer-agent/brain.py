@@ -50,6 +50,14 @@ def parse_action(reply: str) -> dict:
 
 
 def _prompt(task: str, screen: str, history: list, guidance: str = "") -> str:
+    # Import here to avoid circular dependency
+    try:
+        from performance import compress_screen_state, smart_history_filter
+        screen = compress_screen_state(screen)
+        history = smart_history_filter(history)
+    except ImportError:
+        pass
+    
     parts = [f"TASK: {task}"]
     if guidance:
         parts.append(f"SUGGESTED SKILL:\n{guidance}")

@@ -19,6 +19,10 @@ import config
 import eyes
 import hands
 import skills
+try:
+    import performance
+except ImportError:
+    performance = None
 
 
 def run_tool(action: dict) -> str:
@@ -47,6 +51,8 @@ def main() -> int:
                     help="safety cap on the loop (default 8)")
     ap.add_argument("--list-skills", action="store_true",
                     help="list available skills and exit")
+    ap.add_argument("--fast", action="store_true",
+                    help="enable fast-path optimizations for speed")
     args = ap.parse_args()
 
     if args.list_skills:
@@ -59,6 +65,18 @@ def main() -> int:
 
     config.DRY_RUN = args.dry_run
     task = " ".join(args.task) or "open a terminal and type hello"
+    
+    # Fast-path detection
+    if args.fast and performance:
+        fast_actions = performance.detect_fast_path(task)
+        if fast_actions:
+            print(f"[fast-path] Using optimized workflow for: {task}")
+            for action in fast_actions:
+                result = run_tool(action)
+                print(f"    result: {result}")
+            print("TASK COMPLETE (fast-path)")
+            return 0
+    
     guidance = skills.skills_prompt(task)
     if guidance:
         print(f"[skill] {guidance.splitlines()[0]}")
