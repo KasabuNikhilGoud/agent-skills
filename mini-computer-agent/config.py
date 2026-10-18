@@ -35,4 +35,12 @@ def check_action(action: dict):
         if not app_allowed(name):
             return (f"app '{name}' is not in the allowlist; allowed: "
                     f"{', '.join(sorted(ALLOWED_APPS))}")
+    if action.get("tool") == "run_command":
+        cmd = (action.get("args") or {}).get("cmd", "")
+        if not cmd:
+            return "run_command requires a 'cmd' argument"
+        # Refuse destructive commands
+        dangerous = ["rm ", "mv ", "cp ", "dd ", "mkfs", "format", "del ", "shutdown", "reboot"]
+        if any(d in cmd.lower() for d in dangerous):
+            return f"command '{cmd}' contains potentially destructive operations"
     return None
